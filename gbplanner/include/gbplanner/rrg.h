@@ -12,6 +12,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Polygon.h>
 #include <geometry_msgs/PolygonStamped.h>
+#include <geometry_msgs/PoseArray.h>
 #include <kdtree/kdtree.h>
 #include <pcl/common/distances.h>
 #include <pcl/filters/crop_box.h>
@@ -263,6 +264,11 @@ class Rrg {
   // Add frontiers from the local graph to the global graph
   void addFrontiers(int best_vertex_id);
 
+  // Publish list of local graph points 
+  void publishLocalGraphPoints();
+  //Publish list of global graph points
+  void publishGlobalGraphPoints();
+
   void semanticsCallback(const planner_semantic_msgs::SemanticPoint& semantic);
 
   std::string world_frame_ = "world";
@@ -275,6 +281,8 @@ class Rrg {
   ros::Publisher free_cloud_pub_;
   ros::Publisher time_log_pub_;
   ros::Publisher pci_reset_pub_;
+  ros::Publisher local_graph_points_pub_;
+  ros::Publisher global_graph_points_pub_;
 
   ros::Subscriber semantics_subscriber_;
   ros::Subscriber stop_srv_subscriber_;
