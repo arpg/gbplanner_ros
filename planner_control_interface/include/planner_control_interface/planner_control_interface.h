@@ -33,6 +33,7 @@
 #include "planner_msgs/planner_geofence.h"
 #include "planner_msgs/planner_global.h"
 #include "planner_msgs/planner_go_to_waypoint.h"
+#include "planner_msgs/planner_go_to_waypoint_with_pose.h"
 #include "planner_msgs/planner_homing.h"
 #include "planner_msgs/planner_request_path.h"
 #include "planner_msgs/planner_search.h"
@@ -40,7 +41,9 @@
 #include "planner_msgs/planner_set_homing_pos.h"
 #include "planner_msgs/planner_set_planning_mode.h"
 #include "planner_msgs/planner_srv.h"
+#include "planner_msgs/WaypointPlanStatus.h"
 #include "planner_semantic_msgs/SemanticPoint.h"
+
 
 namespace explorer {
 
@@ -67,6 +70,7 @@ class PlannerControlInterface {
   ros::Publisher reference_pub_;
   ros::Publisher planner_status_pub_;
   ros::Publisher stop_request_pub_;
+  ros::Publisher waypoint_status_pub_;
   ros::Subscriber odometry_sub_;
   ros::Subscriber pose_sub_;
   ros::Subscriber pose_stamped_sub_;
@@ -98,6 +102,7 @@ class PlannerControlInterface {
   ros::ServiceServer pci_std_go_to_waypoint_server_;
   ros::ServiceServer pci_geofence_server_;
   ros::ServiceServer pci_to_waypoint_server_;
+  ros::ServiceServer pci_to_waypoint_with_pose_server_;
   ros::ServiceServer pci_passing_gate_server_;
   ros::ServiceServer rotate_180_deg_server_;
   ros::ServiceServer pci_std_global_last_specified_frontier_server_;
@@ -210,6 +215,9 @@ class PlannerControlInterface {
                            planner_msgs::pci_geofence::Response& res);
   bool goToWaypointCallback(planner_msgs::pci_to_waypoint::Request& req,
                             planner_msgs::pci_to_waypoint::Response& res);
+  bool stdSrvGoToWaypointCallbackWithPose(
+      planner_msgs::planner_go_to_waypoint_with_pose::Request& req,
+      planner_msgs::planner_go_to_waypoint_with_pose::Response& res);
   bool passingGateCallback(std_srvs::Trigger::Request& req,
                            std_srvs::Trigger::Response& res);
 

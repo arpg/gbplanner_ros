@@ -17,6 +17,8 @@ PlannerControlInterface::PlannerControlInterface(
   stop_request_pub_ = nh_.advertise<std_msgs::Bool>(
       "planner_control_interface/stop_request", 5);
 
+  waypoint_status_pub_ = nh_.advertise<planner_msgs::WaypointPlanStatus>("waypoint_status", 1, true);
+
   odometry_sub_ = nh_.subscribe(
       "odometry", 1, &PlannerControlInterface::odometryCallback, this);
   pose_sub_ =
@@ -40,6 +42,9 @@ PlannerControlInterface::PlannerControlInterface(
   pci_std_go_to_waypoint_server_ = nh_.advertiseService(
       "planner_control_interface/std_srvs/go_to_waypoint",
       &PlannerControlInterface::stdSrvGoToWaypointCallback, this);
+  pci_to_waypoint_with_pose_server_ = nh_.advertiseService(
+      "planner_control_interface/std_srvs/go_to_waypoint_with_pose",
+      &PlannerControlInterface::stdSrvGoToWaypointCallbackWithPose, this);
   pci_initialization_server_ = nh_.advertiseService(
       "pci_initialization_trigger",
       &PlannerControlInterface::initializationCallback, this);
@@ -127,10 +132,10 @@ PlannerControlInterface::PlannerControlInterface(
       "semantic_location", 10);
 
   nav_goal_sub_ =
-      nh_.subscribe("/move_base_simple/goal", 1,
+      nh_.subscribe("move_base_simple/goal", 1,
                     &PlannerControlInterface::navGoalCallback, this);
   pose_goal_sub_ =
-      nh_.subscribe("/global_planner/waypoint_request", 1,
+      nh_.subscribe("global_planner/waypoint_request", 1,
                     &PlannerControlInterface::poseGoalCallback, this);
   nav_goal_client_ = nh_.serviceClient<planner_msgs::planner_go_to_waypoint>(
       "gbplanner/go_to_waypoint");
@@ -459,6 +464,20 @@ bool PlannerControlInterface::stdSrvGoToWaypointCallback(
   return true;
 }
 
+bool PlannerControlInterface::stdSrvGoToWaypointCallbackWithPose(
+    planner_msgs::planner_go_to_waypoint_with_pose::Request& req, planner_msgs::planner_go_to_waypoint_with_pose::Response& res) {
+  setGoal(req.waypoint);    
+  planner_msgs::planner_set_planning_mode planning_mode_srv;
+  planning_mode_srv.request.planning_mode =
+      planner_msgs::planner_set_planning_mode::Request::kManual;
+  planner_set_trigger_mode_client_.call(planning_mode_srv);
+  go_to_waypoint_request_ = true;
+  go_to_waypoint_with_checking_ = req.check_collision;
+  res.success = true;
+  return true;
+}
+
+
 bool PlannerControlInterface::stdSrvsSinglePlanningCallback(
     std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   planner_msgs::pci_trigger::Request pci_trigger_request;
@@ -613,6 +632,11 @@ void PlannerControlInterface::runGlobalRepositioning() {
   planner_srv.request.waypoint.header = set_waypoint_stamped_.header;
   planner_srv.request.waypoint.pose = set_waypoint_stamped_.pose;
 
+  //Status Message
+  planner_msgs::WaypointPlanStatus plan_status_msg;
+  plan_status_msg.header.stamp = ros::Time::now();
+  plan_status_msg.success = false;
+
   if (nav_goal_client_.call(planner_srv)) {
     if (!planner_srv.response.path.empty()) {
       // Execute path.
@@ -622,6 +646,11 @@ void PlannerControlInterface::runGlobalRepositioning() {
       pci_manager_->executePath(planner_srv.response.path, path_to_be_exe,
                                 PCIManager::ExecutionPathType::kGlobalPath);
       current_path_ = path_to_be_exe;
+      //Publish status
+      plan_status_msg.success = true;
+      plan_status_msg.waypoint = set_waypoint_stamped_;
+      plan_status_msg.path_end_pose = current_path_.back();
+
     } else {
       ROS_WARN_THROTTLE(1, "Will not execute the path.");
       ros::Duration(0.5).sleep();
@@ -631,7 +660,11 @@ void PlannerControlInterface::runGlobalRepositioning() {
     ROS_WARN_THROTTLE(1, "Planner service failed");
     ros::Duration(0.5).sleep();
   }
+  waypoint_status_pub_.publish(plan_status_msg);
 }
+
+
+
 
 void PlannerControlInterface::runPassingGate() {
   bool success = true;

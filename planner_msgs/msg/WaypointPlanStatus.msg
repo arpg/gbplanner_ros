@@ -1,0 +1,4 @@
+Header header
+bool success
+geometry_msgs/PoseStamped waypoint
+geometry_msgs/Pose path_end_pose
