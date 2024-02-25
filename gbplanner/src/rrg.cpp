@@ -78,6 +78,9 @@ void Rrg::initializeAttributes() {
   global_graph_points_pub_ = nh_.advertise<geometry_msgs::PoseArray>(
       "gbplanner_node/global_graph_points", 10);
 
+  frontier_points_pub_ = nh_.advertise<geometry_msgs::PoseArray>(
+      "gbplanner_node/frontier_points", 10);
+
   global_graph_update_timer_ =
       nh_.createTimer(ros::Duration(kGlobalGraphUpdateTimerPeriod),
                       &Rrg::expandGlobalGraphTimerCallback, this);
@@ -1590,6 +1593,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
 
     add_frontiers_to_global_graph_ = true;
     publishGlobalGraphPoints();
+    publishFrontierPoints();
     visualization_->visualizeGlobalGraph(global_graph_);
   } else {
     gstatus = Rrg::GraphStatus::NO_GAIN;
@@ -1968,14 +1972,48 @@ void Rrg::publishGlobalGraphPoints() {
   pose_array.header.frame_id = "world";
   for (Graph::GraphType::vertex_iterator it = vi.first; it != vi.second; ++it) {
     int id = g->getVertexProperty(it);
-    geometry_msgs::Pose pose;
-    pose.position.x = v_map[id]->state[0];
-    pose.position.y = v_map[id]->state[1];
-    pose.position.z = v_map[id]->state[2];
-    pose_array.poses.push_back(pose);
+    Vertex* vertex = v_map[id];
+    if (vertex->type != VertexType::kFrontier){ 
+      geometry_msgs::Pose pose;
+      pose.position.x = v_map[id]->state[0];
+      pose.position.y = v_map[id]->state[1];
+      pose.position.z = v_map[id]->state[2];
+      pose_array.poses.push_back(pose);
+    }
   }
 
   global_graph_points_pub_.publish(pose_array);
+}
+
+void Rrg::publishFrontierPoints() {
+  std::pair<Graph::GraphType::vertex_iterator,
+            Graph::GraphType::vertex_iterator>
+      vi;
+
+  std::shared_ptr<Graph> g = global_graph_->graph_;
+  std::unordered_map<int, Vertex*>& v_map = global_graph_->vertices_map_;
+
+  if (global_graph_->getNumVertices() == 0) return;
+  if (frontier_points_pub_.getNumSubscribers() < 1) return;
+
+  g->getVertexIterator(vi);
+  // Initialize the publisher for frontier points
+  geometry_msgs::PoseArray pose_array;
+  pose_array.header.stamp = ros::Time::now();
+  pose_array.header.frame_id = "world";
+  for (Graph::GraphType::vertex_iterator it = vi.first; it != vi.second; ++it) {
+    int id = g->getVertexProperty(it);
+    Vertex* vertex = v_map[id];
+    if (vertex->type == VertexType::kFrontier) {
+      geometry_msgs::Pose pose;
+      pose.position.x = v_map[id]->state[0];
+      pose.position.y = v_map[id]->state[1];
+      pose.position.z = v_map[id]->state[2];
+      pose_array.poses.push_back(pose);
+    }
+  }
+
+  frontier_points_pub_.publish(pose_array);
 }
 
 void Rrg::freePointCloudtimerCallback(const ros::TimerEvent& event) {
@@ -2265,6 +2303,7 @@ void Rrg::semanticsCallback(
     }
   }
   publishGlobalGraphPoints();
+  publishFrontierPoints();
   visualization_->visualizeGlobalGraph(global_graph_);
 }
 
@@ -3422,6 +3461,7 @@ std::vector<geometry_msgs::Pose> Rrg::searchHomingPath(
                                         link_vertex->id);
   }
   publishGlobalGraphPoints();
+  publishFrontierPoints();
   visualization_->visualizeGlobalGraph(global_graph_);
 
   return ret_path;
@@ -3597,6 +3637,7 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
     }
   }
   publishGlobalGraphPoints();
+  publishFrontierPoints();
   visualization_->visualizeGlobalGraph(global_graph_);
   // Modify path if required
   if (planning_params_.path_safety_enhance_enable) {
@@ -5401,6 +5442,7 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
   }
 
   publishGlobalGraphPoints();
+  publishFrontierPoints();
   visualization_->visualizeGlobalGraph(global_graph_);
   visualization_->visualizeRefPath(ret_path);
   return ret_path;
@@ -5690,6 +5732,7 @@ std::vector<geometry_msgs::Pose> Rrg::searchPathToPassGate() {
       }
       addRefPathToGraph(global_graph_, vertices_to_add);
       publishGlobalGraphPoints();
+      publishFrontierPoints();
       visualization_->visualizeGlobalGraph(global_graph_);
     }
     visualization_->visualizeRefPath(ret_path);

@@ -268,6 +268,8 @@ class Rrg {
   void publishLocalGraphPoints();
   //Publish list of global graph points
   void publishGlobalGraphPoints();
+  // Publish list of frontier points
+  void publishFrontierPoints();
 
   void semanticsCallback(const planner_semantic_msgs::SemanticPoint& semantic);
 
@@ -283,6 +285,7 @@ class Rrg {
   ros::Publisher pci_reset_pub_;
   ros::Publisher local_graph_points_pub_;
   ros::Publisher global_graph_points_pub_;
+  ros::Publisher frontier_points_pub_;
 
   ros::Subscriber semantics_subscriber_;
   ros::Subscriber stop_srv_subscriber_;
