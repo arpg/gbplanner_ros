@@ -2338,7 +2338,7 @@ bool Rrg::search(geometry_msgs::Pose source_pose,
   ConnectStatus status = findPathToConnect(
       source, target, graph_search, sampling_params, final_target_id, path_ret);
   // visualization
-  publishLocalGraphPoints();
+  //publishLocalGraphPoints();
   visualization_->visualizeGraph(graph_search);
   visualization_->visualizeSampler(random_sampler_to_search_);
 
@@ -3485,6 +3485,11 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
   wp << waypoint.pose.position.x, waypoint.pose.position.y,
       waypoint.pose.position.z;
 
+  //Add waypoint to the graph
+  ExpandGraphReport rep;
+  expandGraph(global_graph_, wp, rep);
+  
+
   Vertex* wp_nearest_vertex;
   if (!global_graph_->getNearestVertex(&wp, &wp_nearest_vertex)) {
     ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
@@ -3580,9 +3585,15 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
     }
   }
 
+  // ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
+  //               "Finding a path from current[%d] to vertex[%d].",
+  //               link_vertex->id, wp_nearest_vertex->id);
+
   ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                "Finding a path from current[%d] to vertex[%d].",
-                link_vertex->id, wp_nearest_vertex->id);
+              "Finding a path from current[%d] (State: x=%f, y=%f, z=%f, yaw=%f) to vertex[%d] (State: x=%f, y=%f, z=%f, yaw=%f).",
+              link_vertex->id, link_vertex->state[0], link_vertex->state[1], link_vertex->state[2], link_vertex->state[3],
+              wp_nearest_vertex->id, wp_nearest_vertex->state[0], wp_nearest_vertex->state[1], wp_nearest_vertex->state[2], wp_nearest_vertex->state[3]);
+
 
   if (connect_state_to_graph) {
     if (!global_graph_->findShortestPaths(link_vertex->id, global_graph_rep_)) {
@@ -3609,6 +3620,27 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
       tf::poseTFToMsg(poseTF, pose);
       ret_path.push_back(pose);
     }
+
+    if (!ret_path.empty()) {
+    // Log the beginning state of ret_path if it's not empty
+    auto& start_pose = ret_path.front();
+    ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
+                  "ret_path start pose: Position - x: %f, y: %f, z: %f; Orientation - x: %f, y: %f, z: %f, w: %f",
+                  start_pose.position.x, start_pose.position.y, start_pose.position.z,
+                  start_pose.orientation.x, start_pose.orientation.y,
+                  start_pose.orientation.z, start_pose.orientation.w);
+  }
+
+  if (!ret_path.empty()) {
+  // Log the end state of ret_path
+  auto& end_pose = ret_path.back();
+  ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
+                "ret_path end pose: Position - x: %f, y: %f, z: %f; Orientation - x: %f, y: %f, z: %f, w: %f",
+                end_pose.position.x, end_pose.position.y, end_pose.position.z,
+                end_pose.orientation.x, end_pose.orientation.y,
+                end_pose.orientation.z, end_pose.orientation.w);
+}
+
 
     // Set the heading angle tangent with the moving direction,
     // from the second waypoint; the first waypoint keeps the same direction.

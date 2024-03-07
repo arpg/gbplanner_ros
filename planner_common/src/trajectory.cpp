@@ -227,6 +227,10 @@ bool Trajectory::interpolatePath(const TrajectoryType& traj,
       }
     }
   }
+  if (!traj.empty()) {
+    traj_intp.push_back(traj.back());
+  }
+
   return true;
 }
 

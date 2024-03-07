@@ -466,7 +466,8 @@ bool PlannerControlInterface::stdSrvGoToWaypointCallback(
 
 bool PlannerControlInterface::stdSrvGoToWaypointCallbackWithPose(
     planner_msgs::planner_go_to_waypoint_with_pose::Request& req, planner_msgs::planner_go_to_waypoint_with_pose::Response& res) {
-  setGoal(req.waypoint);    
+  setGoal(req.waypoint);
+  target_setpoint_ = set_waypoint_stamped_.pose;
   planner_msgs::planner_set_planning_mode planning_mode_srv;
   planning_mode_srv.request.planning_mode =
       planner_msgs::planner_set_planning_mode::Request::kManual;
