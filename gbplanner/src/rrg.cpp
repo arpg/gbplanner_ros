@@ -551,11 +551,22 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
   if (robot_params_.type == RobotType::kGroundRobot) {
     Eigen::Vector3d new_pos;
     new_pos << new_state[0], new_state[1], new_state[2];
+
+    ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
+                   "Initial new_pos calculated: [%f, %f, %f]",
+                   new_pos[0], new_pos[1], new_pos[2]);
     MapManager::VoxelStatus vs;
     double ground_height = projectSample(new_pos, vs);
     if (vs == MapManager::VoxelStatus::kOccupied) {
       new_pos[2] -= (ground_height - planning_params_.max_ground_height);
+
+      ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
+                     "Adjusted new_pos due to Occupied Voxel: [%f, %f, %f]",
+                     new_pos[0], new_pos[1], new_pos[2]);
     } else {
+
+      ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
+                    "VoxelStatus not Occupied, setting status to kErrorCollisionEdge and returning.");
       rep.status = ExpandGraphStatus::kErrorCollisionEdge;
       return;
     }
@@ -3487,7 +3498,38 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
 
   //Add waypoint to the graph
   ExpandGraphReport rep;
-  expandGraph(global_graph_, wp, rep);
+  expandGraph(global_graph_, wp, rep, true);
+
+  ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
+              "ExpandGraphReport - Status: %d, Vertices Added: %d, Edges Added: %d, Vertex Added: %p",
+              static_cast<int>(rep.status), rep.num_vertices_added, rep.num_edges_added, static_cast<void*>(rep.vertex_added));
+
+  
+  if (rep.status != ExpandGraphStatus::kSuccess) {
+    // Sample points around graph
+    const double radius = 0.5; // radius in meters
+    const int num_samples = 20; // number of points to sample around the waypoint
+    std::vector<StateVec> sample_points;
+      for (int i = 0; i < num_samples; ++i) {
+          double angle = (2 * M_PI / num_samples) * i;
+          StateVec point;
+          point << wp[0] + radius * cos(angle), wp[1] + radius * sin(angle), wp[2];
+          sample_points.push_back(point);
+      }
+      
+      for (const auto& point : sample_points) {
+            ExpandGraphReport rep;
+            StateVec modifiable_point = point;
+            expandGraph(global_graph_, modifiable_point, rep, true); // Assuming expandGraph() can be called as such
+
+            // Optional: Log the attempt to add each sampled point
+            ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
+              "Expanding graph at sampled point: [%f, %f, %f], status: %d",
+              point[0], point[1], point[2], static_cast<int>(rep.status));
+        }
+
+  }
+
   
 
   Vertex* wp_nearest_vertex;
