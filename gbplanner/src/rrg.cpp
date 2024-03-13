@@ -3496,6 +3496,24 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
   wp << waypoint.pose.position.x, waypoint.pose.position.y,
       waypoint.pose.position.z;
 
+  //Add leaf vertices from local graph to global graph
+  std::vector<Vertex*> leaf_vertices;
+  local_graph_->getLeafVertices(leaf_vertices); // Assuming local_graph_ exists and has a similar method
+
+  // Attempt to add each leaf vertex from the local graph to the global graph
+  for (Vertex* leaf_vertex : leaf_vertices) {
+    StateVec leaf_state;
+    leaf_state << leaf_vertex->state[0], leaf_vertex->state[1], leaf_vertex->state[2], leaf_vertex->state[3];
+
+    ExpandGraphReport leaf_rep;
+    expandGraph(global_graph_, leaf_state, leaf_rep, false); // false for not forcing addition if it's optional
+
+    ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
+                   "Expanding global graph at leaf vertex: [%f, %f, %f], status: %d",
+                   leaf_vertex->state[0], leaf_vertex->state[1], leaf_vertex->state[2], static_cast<int>(leaf_rep.status));
+  }
+
+
   //Add waypoint to the graph
   ExpandGraphReport rep;
   expandGraph(global_graph_, wp, rep, true);
