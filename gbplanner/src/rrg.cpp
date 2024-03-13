@@ -3504,7 +3504,47 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
               "ExpandGraphReport - Status: %d, Vertices Added: %d, Edges Added: %d, Vertex Added: %p",
               static_cast<int>(rep.status), rep.num_vertices_added, rep.num_edges_added, static_cast<void*>(rep.vertex_added));
 
-  
+  //If we couldn't add to the graph try a linear interpolation and add those points:
+    Eigen::Vector3d cur_state_eg(current_state_[0], current_state_[1], current_state_[2]);
+    Eigen::Vector3d wp_eg(waypoint.pose.position.x, waypoint.pose.position.y, waypoint.pose.position.z);
+    Eigen::Vector3d direction_wp = wp_eg - cur_state_eg; // Direction vector from current state to waypoint
+    double distance_eg = direction_wp.norm(); // Distance between current state and waypoint
+    direction_wp.normalize(); // Normalize direction vector
+
+    // Vector perpendicular to the direction for sampling within 0.3m
+    Eigen::Vector3d perpendicular(-direction_wp.y(), direction_wp.x(), 0);
+    perpendicular.normalize();
+
+    const double sample_distance = 0.5; // Sampling distance along the line
+    const double offset_distance = 0.3; // Offset distance on either side of the line
+
+    for (double d = 0; d <= distance_eg; d += sample_distance) {
+        // Calculate sample point along the line
+        Eigen::Vector3d sample_point = cur_state_eg + d * direction_wp;
+
+        // Calculate points on either side of the line
+        Eigen::Vector3d offset_point1 = sample_point + offset_distance * perpendicular;
+        Eigen::Vector3d offset_point2 = sample_point - offset_distance * perpendicular;
+
+        std::vector<Eigen::Vector3d> points_to_add = {sample_point, offset_point1, offset_point2};
+
+   
+        for (const auto& point : points_to_add) {
+          // Convert Eigen::Vector3d point to StateVec if necessary
+          StateVec modifiable_point;
+          modifiable_point << point[0], point[1], point[2], 0; // Ensure the dimension matches StateVec, adjust 0 accordingly
+
+          ExpandGraphReport rep;
+          expandGraph(global_graph_, modifiable_point, rep, false);
+
+          // Optional: Log the attempt to add each sampled point
+          ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
+                        "Expanding graph at sampled point: [%f, %f, %f], status: %d",
+                        point[0], point[1], point[2], static_cast<int>(rep.status));
+          }
+    }
+
+  //If we couldn't add the point to the graph try to sample a radius around the point after linear interpolation
   if (rep.status != ExpandGraphStatus::kSuccess) {
     // Sample points around graph
     const double radius = 0.5; // radius in meters
@@ -3520,7 +3560,7 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
       for (const auto& point : sample_points) {
             ExpandGraphReport rep;
             StateVec modifiable_point = point;
-            expandGraph(global_graph_, modifiable_point, rep, true); // Assuming expandGraph() can be called as such
+            expandGraph(global_graph_, modifiable_point, rep, false); // Assuming expandGraph() can be called as such
 
             // Optional: Log the attempt to add each sampled point
             ROS_DEBUG_COND(global_verbosity >= Verbosity::DEBUG,
