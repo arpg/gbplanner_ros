@@ -304,6 +304,7 @@ struct PlanningParams {
   double clustering_radius;
   double ray_cast_step_size_multiplier;
   bool nonuniform_ray_cast;
+  double kGDistancePenalty; // New param to allow for exp_gain==vol_gain (see rrg.cpp line 5466)
   // Best path generation and improvement for safety
   double traverse_length_max;
   double traverse_time_max;

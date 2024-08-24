@@ -5463,10 +5463,9 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
         time_spare = 1;
       }
 
-      // Set kGDistancePenalty so that exp_gain is volumetric gain
-      const double kGDistancePenalty = 0.00; //0.01;
+      // const double kGDistancePenalty = 0.01; // Used as a param now
       double exp_gain = f->vol_gain.gain *
-                        exp(-kGDistancePenalty * current_to_frontier_distance);
+                        exp(-planning_params_.kGDistancePenalty * current_to_frontier_distance);
       if (!ignore_time) exp_gain *= time_spare;
       frontier_exp_gain[f->id] = exp_gain;
       if (exp_gain > best_gain) {
