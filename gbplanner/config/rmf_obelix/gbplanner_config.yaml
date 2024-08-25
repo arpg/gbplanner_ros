@@ -138,8 +138,8 @@ PlanningParams:
   # Gains:
   path_length_penalty: 0.04
   path_direction_penalty: 0.1
-  kGDistancePenalty: 0.01           # Set kGDistancePenalty as a param, versus hard-coded
-  log_file_path: "/path/to/logfile" # Path to the log file to verify volumetric gain == exploration gain
+  kGDistancePenalty: 0.01                   # Set kGDistancePenalty as a param, versus hard-coded
+  log_file_path: "/gb_planner_logfile.txt"  # Path to the log file to verify volumetric gain == exploration gain
   occupied_voxel_gain: 0.0
   free_voxel_gain:  0.0 # prefer directions towards more free voxels in case of the dead-end
   unknown_voxel_gain: 60.0
