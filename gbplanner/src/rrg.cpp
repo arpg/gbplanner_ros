@@ -5431,6 +5431,11 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
           "explored.");
       return ret_path;
     }
+    
+    // TODO: Delete after verification (Doncey Albin - 08/25/2024)
+    // Log best gain, volumetric gain, and exploration gain to a text file.
+    std::ofstream log_file;
+    log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
 
     // Compute exploration gain.
     std::unordered_map<int, double> frontier_exp_gain;
@@ -5472,16 +5477,12 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
       if (exp_gain > best_gain) {
         best_gain = exp_gain;
         best_frontier = f;
-      }
 
-      // TODO: Delete after verification (Doncey Albin - 08/25/2024)
-      // Log best gain, volumetric gain, and exploration gain to a text file.
-      std::ofstream log_file;
-      log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
-      log_file << "\nBest gain: [" << best_gain << "]\n"
-               << "     - Volumetric gain: [" << vol_gain.gain << "], Exploration Gain: [" << exp_gain << "]";
-      log_file.close(); // Close the file stream
+        log_file << "\nBest gain: [" << best_gain << "]\n"
+                 << "     - Volumetric gain: [" << f->vol_gain.gain << "], Exploration Gain: [" << exp_gain << "]";
+      }
     }
+    log_file.close(); // Close the file stream
 
     // Rank from the best one.
     // Sort into descending order.
