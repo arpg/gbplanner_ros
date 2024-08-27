@@ -5436,7 +5436,9 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
     // Log best gain, volumetric gain, and exploration gain to a text file.
     std::ofstream log_file;
     log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
-
+    // print log file path
+    log_file << "\n\nLog file path: [" << planning_params_.log_file_path << "]\n";
+    
     // Compute exploration gain.
     std::unordered_map<int, double> frontier_exp_gain;
     for (int i = 0; i < feasible_global_frontiers.size(); ++i) {

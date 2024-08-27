@@ -957,6 +957,18 @@ bool PlanningParams::loadParams(std::string ns) {
     ROSPARAM_WARN(param_name, hanging_vertex_penalty);
   }
 
+  param_name = ns + "/kGDistancePenalty";
+  if (!ros::param::get(param_name, kGDistancePenalty)) {
+    kGDistancePenalty = 0.0;  // no penalty
+    ROSPARAM_WARN(param_name, kGDistancePenalty);
+  }
+
+  param_name = ns + "/log_file_path";
+  if (!ros::param::get(param_name, log_file_path)) {
+    log_file_path = "/root/subt_ws/gb_planner_logfile.txt";  // Default log file
+    ROSPARAM_WARN(param_name, log_file_path);
+  }
+
   param_name = ns + "/traverse_length_max";
   if (!ros::param::get(param_name, traverse_length_max)) {
     traverse_length_max = edge_length_max;
