@@ -5473,15 +5473,15 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
         best_gain = exp_gain;
         best_frontier = f;
       }
-    }
 
-    // TODO: Delete after verification (Doncey Albin - 08/25/2024)
-    // Log best gain, volumetric gain, and exploration gain to a text file.
-    std::ofstream log_file;
-    log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
-    log_file << "\nBest gain: [" << best_gain << "] with ID [" << best_path_id << "]\n"
-            << "     - Volumetric gain: [" << vol_gain << "], Exploration Gain: [" << exp_gain << "]\n";
-    log_file.close(); // Close the file stream
+      // TODO: Delete after verification (Doncey Albin - 08/25/2024)
+      // Log best gain, volumetric gain, and exploration gain to a text file.
+      std::ofstream log_file;
+      log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
+      log_file << "\nBest gain: [" << best_gain << "]\n"
+               << "     - Volumetric gain: [" << vol_gain.gain << "], Exploration Gain: [" << exp_gain << "]";
+      log_file.close(); // Close the file stream
+    }
 
     // Rank from the best one.
     // Sort into descending order.
