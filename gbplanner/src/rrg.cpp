@@ -1520,7 +1520,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
 
       // TODO: Delete after verification (Doncey Albin - 09/25/2024)
       if (i < 1) {
-        logMessageText = "   - path_gain " + std::to_string(path_gain_orig) + ", accum_vol_gain: " + std::to_string(accum_vol_gain) + "\n";
+        logMessageText = "   - path_gain " + std::to_string(path_gain) + ", accum_vol_gain: " + std::to_string(accum_vol_gain) + "\n";
         
         logMessage(logMessageText);
       }
