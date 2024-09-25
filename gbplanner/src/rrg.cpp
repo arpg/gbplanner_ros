@@ -1492,7 +1492,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
           }
         }
         if (!inadmissible_edge) {
-          path_vol_gain += v_id->vol_gain.gain;              // Accumulated volumetric gain without hanging_vertex_penalty applied
+          path_vol_gain += v_id->vol_gain.gain;                     // TODO: Delete after verification (Doncey Albin - 09/25/2024)
           path_gain += vol_gain * exp(-lambda * path_length);
           v_id->vol_gain.accumulative_gain = path_gain;
           num_unknown_voxels += v_id->vol_gain.num_unknown_voxels;
