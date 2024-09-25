@@ -735,9 +735,7 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
 void Rrg::expandGraphEdges(std::shared_ptr<GraphManager> graph_manager,
                            Vertex* new_vertex, ExpandGraphReport& rep) {
   std::vector<Vertex*> nearest_vertices;
-  if (!graph_manager->getNearestVertices(&(new_vertex->state),
-                                         planning_params_.nearest_range,
-                                         &nearest_vertices)) {
+  if (!graph_manager->getNearestVertices(&(new_vertex->state), planning_params_.nearest_range, &nearest_vertices)) {
     rep.status = ExpandGraphStatus::kErrorKdTree;
     return;
   }
@@ -745,30 +743,24 @@ void Rrg::expandGraphEdges(std::shared_ptr<GraphManager> graph_manager,
   origin << new_vertex->state[0], new_vertex->state[1], new_vertex->state[2];
   for (int i = 0; i < nearest_vertices.size(); ++i) {
     Eigen::Vector3d direction;
-    direction << nearest_vertices[i]->state[0] - origin[0],
-        nearest_vertices[i]->state[1] - origin[1],
+    direction << nearest_vertices[i]->state[0] - origin[0], nearest_vertices[i]->state[1] - origin[1],
         nearest_vertices[i]->state[2] - origin[2];
     double d_norm = direction.norm();
-    if ((d_norm > planning_params_.edge_length_min) &&
-        (d_norm < planning_params_.edge_length_max)) {
-      Eigen::Vector3d p_overshoot =
-          direction / d_norm * planning_params_.edge_overshoot;
-      Eigen::Vector3d p_start =
-          origin + robot_params_.center_offset - p_overshoot;
+    if ((d_norm > planning_params_.edge_length_min) && (d_norm < planning_params_.edge_length_max)) {
+      Eigen::Vector3d p_overshoot = direction / d_norm * planning_params_.edge_overshoot;
+      Eigen::Vector3d p_start = origin + robot_params_.center_offset - p_overshoot;
       Eigen::Vector3d p_end = origin + robot_params_.center_offset + direction;
       if (nearest_vertices[i]->id != 0) p_end = p_end + p_overshoot;
 
       bool admissible_edge = false;
       std::vector<Eigen::Vector3d> projected_edge;
       if (robot_params_.type == RobotType::kAerialRobot) {
-        MapManager::VoxelStatus vs =
-            map_manager_->getPathStatus(p_start, p_end, robot_box_size_, true);
+        MapManager::VoxelStatus vs = map_manager_->getPathStatus(p_start, p_end, robot_box_size_, true);
         if (MapManager::VoxelStatus::kFree == vs) {
           admissible_edge = true;
         }
       } else if (robot_params_.type == RobotType::kGroundRobot) {
-        ProjectedEdgeStatus es = getProjectedEdgeStatus(
-            p_start, p_end, robot_box_size_, true, projected_edge, false);
+        ProjectedEdgeStatus es = getProjectedEdgeStatus(p_start, p_end, robot_box_size_, true, projected_edge, false);
         if (ProjectedEdgeStatus::kAdmissible == es) {
           admissible_edge = true;
         }
@@ -839,18 +831,15 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
 
   // Since we are buiding graph,
   // Consider to check the overshoot for both 2 directions except root node.
-  Eigen::Vector3d overshoot_vec =
-      planning_params_.edge_overshoot * direction.normalized();
+  Eigen::Vector3d overshoot_vec = planning_params_.edge_overshoot * direction.normalized();
   Eigen::Vector3d start_pos = origin + robot_params_.center_offset;
+  
   if (nearest_vertex->id != 0) start_pos = start_pos - overshoot_vec;
-  Eigen::Vector3d end_pos =
-      origin + robot_params_.center_offset + direction + overshoot_vec;
-  if (planning_params_.geofence_checking_enable &&
-      (GeofenceManager::CoordinateStatus::kViolated ==
-       geofence_manager_->getPathStatus(
-           Eigen::Vector2d(start_pos[0], start_pos[1]),
-           Eigen::Vector2d(end_pos[0], end_pos[1]),
-           Eigen::Vector2d(robot_box_size_[0], robot_box_size_[1])))) {
+    Eigen::Vector3d end_pos = origin + robot_params_.center_offset + direction + overshoot_vec;
+  if (planning_params_.geofence_checking_enable && 
+  (GeofenceManager::CoordinateStatus::kViolated == geofence_manager_->getPathStatus(
+  Eigen::Vector2d(start_pos[0], start_pos[1]), Eigen::Vector2d(end_pos[0], end_pos[1]),
+  Eigen::Vector2d(robot_box_size_[0], robot_box_size_[1])))) {
     rep.status = ExpandGraphStatus::kErrorGeofenceViolated;
     return;
   }
@@ -859,29 +848,23 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
   int steep_edges = 0;
   std::vector<Eigen::Vector3d> projected_edge;
   if (robot_params_.type == RobotType::kAerialRobot) {
-    MapManager::VoxelStatus vs =
-        map_manager_->getPathStatus(start_pos, end_pos, robot_box_size_, true);
+    MapManager::VoxelStatus vs = map_manager_->getPathStatus(start_pos, end_pos, robot_box_size_, true);
     if (MapManager::VoxelStatus::kFree == vs) {
       admissible_edge = true;
     }
   } else if (robot_params_.type == RobotType::kGroundRobot) {
     bool is_hanging = nearest_vertex->is_hanging || new_vertex.is_hanging;
-    ProjectedEdgeStatus es = getProjectedEdgeStatus(
-        start_pos, end_pos, robot_box_size_, true, projected_edge, is_hanging);
+    ProjectedEdgeStatus es = getProjectedEdgeStatus(start_pos, end_pos, robot_box_size_, true, projected_edge, is_hanging);
     if (ProjectedEdgeStatus::kAdmissible == es) {
       admissible_edge = true;
 
-      StateVec strt_st(projected_edge[0](0), projected_edge[0](1),
-                       projected_edge[0](2), 0.0);
-      Vertex* strt_vert =
-          new Vertex(projected_graph_->generateVertexID(), strt_st);
+      StateVec strt_st(projected_edge[0](0), projected_edge[0](1), projected_edge[0](2), 0.0);
+      Vertex* strt_vert = new Vertex(projected_graph_->generateVertexID(), strt_st);
       projected_graph_->addVertex(strt_vert);
       Vertex* prev_vert = strt_vert;
       for (int i = 1; i < projected_edge.size(); ++i) {
-        StateVec proj_st(projected_edge[i](0), projected_edge[i](1),
-                         projected_edge[i](2), 0.0);
-        Vertex* proj_vert =
-            new Vertex(projected_graph_->generateVertexID(), proj_st);
+        StateVec proj_st(projected_edge[i](0), projected_edge[i](1), projected_edge[i](2), 0.0);
+        Vertex* proj_vert = new Vertex(projected_graph_->generateVertexID(), proj_st);
         projected_graph_->addVertex(proj_vert);
         double edge_len = (proj_vert->state - prev_vert->state).norm();
         projected_graph_->addEdge(proj_vert, prev_vert, edge_len);
@@ -911,32 +894,26 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
       double avg_inclination = 0.0;
 
       for (int i = 1; i < projected_edge.size(); ++i) {
-        Eigen::Vector3d edge_segment =
-            projected_edge[i] - projected_edge[i - 1];
-        double inclination = (std::atan2(std::abs(edge_segment(2)),
-                                         edge_segment.head(2).norm()));
+        Eigen::Vector3d edge_segment = projected_edge[i] - projected_edge[i - 1];
+        double inclination = (std::atan2(std::abs(edge_segment(2)), edge_segment.head(2).norm()));
         // std::cout << inclination << std::endl;
         if (inclination > max_inclination) max_inclination = inclination;
         avg_inclination += inclination;
       }
       avg_inclination /= projected_edge.size();
 
-      edge_inclinations_[new_vertex_ptr->id][nearest_vertex->id] =
-          avg_inclination;
-      edge_inclinations_[nearest_vertex->id][new_vertex_ptr->id] =
-          avg_inclination;
+      edge_inclinations_[new_vertex_ptr->id][nearest_vertex->id] = avg_inclination;
+      edge_inclinations_[nearest_vertex->id][new_vertex_ptr->id] = avg_inclination;
     }
 
     // Form more edges from neighbors if set RRG mode.
     if (planning_params_.rr_mode == RRModeType::kGraph) {
       std::vector<Vertex*> nearest_vertices;
-      if (!graph_manager->getNearestVertices(
-              &new_state, planning_params_.nearest_range, &nearest_vertices)) {
+      if (!graph_manager->getNearestVertices(&new_state, planning_params_.nearest_range, &nearest_vertices)) {
         rep.status = ExpandGraphStatus::kErrorKdTree;
         return;
       }
-      origin << new_vertex_ptr->state[0], new_vertex_ptr->state[1],
-          new_vertex_ptr->state[2];
+      origin << new_vertex_ptr->state[0], new_vertex_ptr->state[1], new_vertex_ptr->state[2];
       for (int i = 0; i < nearest_vertices.size(); ++i) {
         direction << nearest_vertices[i]->state[0] - origin[0],
             nearest_vertices[i]->state[1] - origin[1],
@@ -945,12 +922,9 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
 
         if ((d_norm > planning_params_.nearest_range_min) &&
             (d_norm < planning_params_.nearest_range_max)) {
-          Eigen::Vector3d p_overshoot =
-              direction / d_norm * planning_params_.edge_overshoot;
-          Eigen::Vector3d p_start =
-              origin + robot_params_.center_offset - p_overshoot;
-          Eigen::Vector3d p_end =
-              origin + robot_params_.center_offset + direction;
+          Eigen::Vector3d p_overshoot = direction / d_norm * planning_params_.edge_overshoot;
+          Eigen::Vector3d p_start = origin + robot_params_.center_offset - p_overshoot;
+          Eigen::Vector3d p_end = origin + robot_params_.center_offset + direction;
           if (nearest_vertices[i]->id != 0) p_end = p_end + p_overshoot;
 
           bool geofence_pass = true;
@@ -966,34 +940,25 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
           if (geofence_pass) {
             admissible_edge = false;
             if (robot_params_.type == RobotType::kAerialRobot) {
-              MapManager::VoxelStatus vs = map_manager_->getPathStatus(
-                  p_start, p_end, robot_box_size_, true);
+              MapManager::VoxelStatus vs = map_manager_->getPathStatus(p_start, p_end, robot_box_size_, true);
               if (MapManager::VoxelStatus::kFree == vs) {
                 admissible_edge = true;
               }
             } else if (robot_params_.type == RobotType::kGroundRobot) {
               projected_edge.clear();
-              bool is_hanging =
-                  new_vertex_ptr->is_hanging || nearest_vertices[i]->is_hanging;
-              ProjectedEdgeStatus es =
-                  getProjectedEdgeStatus(p_start, p_end, robot_box_size_, true,
-                                         projected_edge, is_hanging);
+              bool is_hanging = new_vertex_ptr->is_hanging || nearest_vertices[i]->is_hanging;
+              ProjectedEdgeStatus es = getProjectedEdgeStatus(p_start, p_end, robot_box_size_, true, projected_edge, is_hanging);
               if (ProjectedEdgeStatus::kAdmissible == es) {
                 admissible_edge = true;
-                StateVec strt_st(projected_edge[0](0), projected_edge[0](1),
-                                 projected_edge[0](2), 0.0);
-                Vertex* strt_vert =
-                    new Vertex(projected_graph_->generateVertexID(), strt_st);
+                StateVec strt_st(projected_edge[0](0), projected_edge[0](1), projected_edge[0](2), 0.0);
+                Vertex* strt_vert = new Vertex(projected_graph_->generateVertexID(), strt_st);
                 projected_graph_->addVertex(strt_vert);
                 Vertex* prev_vert = strt_vert;
                 for (int i = 1; i < projected_edge.size(); ++i) {
-                  StateVec proj_st(projected_edge[i](0), projected_edge[i](1),
-                                   projected_edge[i](2), 0.0);
-                  Vertex* proj_vert =
-                      new Vertex(projected_graph_->generateVertexID(), proj_st);
+                  StateVec proj_st(projected_edge[i](0), projected_edge[i](1), projected_edge[i](2), 0.0);
+                  Vertex* proj_vert = new Vertex(projected_graph_->generateVertexID(), proj_st);
                   projected_graph_->addVertex(proj_vert);
-                  double edge_len =
-                      (proj_vert->state - prev_vert->state).norm();
+                  double edge_len = (proj_vert->state - prev_vert->state).norm();
                   projected_graph_->addEdge(proj_vert, prev_vert, edge_len);
                   prev_vert = proj_vert;
                 }
@@ -1006,10 +971,8 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
                 double max_inclination = 0.0;
                 double avg_inclination = 0.0;
                 for (int i = 1; i < projected_edge.size(); ++i) {
-                  Eigen::Vector3d edge_segment =
-                      projected_edge[i] - projected_edge[i - 1];
-                  double inclination = (std::atan2(
-                      std::abs(edge_segment(2)), edge_segment.head(2).norm()));
+                  Eigen::Vector3d edge_segment = projected_edge[i] - projected_edge[i - 1];
+                  double inclination = (std::atan2(std::abs(edge_segment(2)), edge_segment.head(2).norm()));
                   if (inclination > max_inclination)
                     max_inclination = inclination;
                   avg_inclination += inclination;
@@ -1032,8 +995,7 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
   } else {
     stat_->num_edges_fail++;
     if (stat_->num_edges_fail < 500) {
-      std::vector<double> vtmp = {start_pos[0], start_pos[1], start_pos[2],
-                                  end_pos[0],   end_pos[1],   end_pos[2]};
+      std::vector<double> vtmp = {start_pos[0], start_pos[1], start_pos[2], end_pos[0],   end_pos[1],   end_pos[2]};
       stat_->edges_fail.push_back(vtmp);
     }
     rep.status = ExpandGraphStatus::kErrorCollisionEdge;
@@ -1042,12 +1004,10 @@ void Rrg::expandGraph(std::shared_ptr<GraphManager> graph_manager,
   rep.status = ExpandGraphStatus::kSuccess;
 }
 
-void Rrg::expandGraphEdgesBlindly(std::shared_ptr<GraphManager> graph_manager,
-                                  Vertex* new_vertex, double radius,
+void Rrg::expandGraphEdgesBlindly(std::shared_ptr<GraphManager> graph_manager, Vertex* new_vertex, double radius,
                                   ExpandGraphReport& rep) {
   std::vector<Vertex*> nearest_vertices;
-  if (!graph_manager->getNearestVertices(&(new_vertex->state), radius,
-                                         &nearest_vertices)) {
+  if (!graph_manager->getNearestVertices(&(new_vertex->state), radius, &nearest_vertices)) {
     rep.status = ExpandGraphStatus::kNull;
     return;
   }
@@ -1461,6 +1421,10 @@ void Rrg::correctYaw() {
 }
 
 Rrg::GraphStatus Rrg::evaluateGraph() {
+  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  std::string logMessageText =  "\nRrg::evaluateGraph() called:";
+  logMessage(logMessageText);
+
   Rrg::GraphStatus gstatus = Rrg::GraphStatus::OK;
 
   START_TIMER(ttime);
@@ -1473,14 +1437,12 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
   local_graph_->getLeafVertices(leaf_vertices);
   stat_->shortest_path_time = GET_ELAPSED_TIME(ttime);
   t2 = std::chrono::high_resolution_clock::now();
-  stat_chrono_->shortest_path_time =
-      std::chrono::duration<double, std::milli>(t2 - t1).count();
+  stat_chrono_->shortest_path_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
 
   correctYaw();
 
   // Gain calculation for each vertex.
-  computeExplorationGain(planning_params_.leafs_only_for_volumetric_gain,
-                         planning_params_.cluster_vertices_for_gain);
+  computeExplorationGain(planning_params_.leafs_only_for_volumetric_gain, planning_params_.cluster_vertices_for_gain);
 
   // Gain evaluation for valid paths, starting from the leaf to the root.
   START_TIMER(ttime);
@@ -1491,6 +1453,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
   bool frontier_exists = false;
   std::vector<int> negative_edge_leafs;
   std::vector<Eigen::Vector3d> inadmissible_negative_edges;
+  int logged_volgain = 0; // TODO: Delete after verification (Doncey Albin - 09/25/2024)
   for (int i = 0; i < num_leaf_vertices; ++i) {
     int id = leaf_vertices[i]->id;
     std::vector<Vertex*> path;
@@ -1504,27 +1467,31 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
       bool inadmissible_edge = false;
       for (int ind = 0; ind < path_size; ++ind) {
         Vertex* v_id = path[ind];
-        double path_length =
-            local_graph_->getShortestDistance(v_id->id, local_graph_rep_);
-        double vol_gain =
-            v_id->vol_gain.gain *
-            exp(-v_id->is_hanging * planning_params_.hanging_vertex_penalty);
+        double path_length = local_graph_->getShortestDistance(v_id->id, local_graph_rep_);
+        double vol_gain = v_id->vol_gain.gain * exp(-v_id->is_hanging * planning_params_.hanging_vertex_penalty);
+
+        // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+        if (logged_volgain < 1  && v_id->is_hanging) {
+          logMessageText = "   - v_id->vol_gain.gain " + std::to_string(v_id->vol_gain.gain) + ", heuristic vol_gain: " + std::to_string(vol_gain);
+          logMessage(logMessageText);
+          logged_volgain++;
+        }
+        else if (logged_volgain < 1  && !v_id->is_hanging && ind == path_size-1) {
+          logMessageText = "   - v_id->is_hanging is false";
+          logMessage(logMessageText);
+          logged_volgain++;
+        }
 
         if (ind > 0 && robot_params_.type == RobotType::kGroundRobot) {
-          double inclination =
-              edge_inclinations_[path[ind]->id][path[ind - 1]->id];
-          Eigen::Vector3d segment =
-              path[ind]->state.head(3) - path[ind - 1]->state.head(3);
-          if ((path[ind]->state(2) - path[ind - 1]->state(2)) <
-              -map_manager_->getResolution()) {
+          double inclination = edge_inclinations_[path[ind]->id][path[ind - 1]->id];
+          Eigen::Vector3d segment = path[ind]->state.head(3) - path[ind - 1]->state.head(3);
+          if ((path[ind]->state(2) - path[ind - 1]->state(2)) < -map_manager_->getResolution()) {
             // Negative slope
             if (inclination > planning_params_.max_negative_inclination ||
-                (std::atan2(std::abs(segment(2)), segment.head(2).norm()) >
-                 planning_params_.max_negative_inclination)) {
+                (std::atan2(std::abs(segment(2)), segment.head(2).norm()) > planning_params_.max_negative_inclination)) {
               path_gain = 0.0;
               negative_edge_leafs.push_back(leaf_vertices[i]->id);
-              inadmissible_negative_edges.push_back(
-                  path[ind - 1]->state.head(3));
+              inadmissible_negative_edges.push_back(path[ind - 1]->state.head(3));
               inadmissible_negative_edges.push_back(path[ind]->state.head(3));
               inadmissible_edge = true;
             }
@@ -1542,14 +1509,21 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
         continue;
       }
 
+      // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+      double path_gain_orig = path_gain; // Store original path gain calc
+
       // Compare with exploring direction to penalty not-forward paths.
       double lambda2 = planning_params_.path_direction_penalty;
       std::vector<Eigen::Vector3d> path_list;
       local_graph_->getShortestPath(id, local_graph_rep_, true, path_list);
-      double fw_ratio =
-          Trajectory::computeDistanceBetweenTrajectoryAndDirection(
-              path_list, exploring_direction_, 0.2, true);
+      double fw_ratio = Trajectory::computeDistanceBetweenTrajectoryAndDirection(path_list, exploring_direction_, 0.2, true);
       path_gain *= exp(-lambda2 * fw_ratio);
+
+      // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+      if (i < 1) {
+        logMessageText = "   - path_gain " + std::to_string(path_gain_orig) + ", heuristic path_gain: " + std::to_string(path_gain) + "\n";
+        logMessage(logMessageText);
+      }
 
       if (path_gain > best_gain) {
         best_gain = path_gain;
@@ -1557,21 +1531,20 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
       }
     }
   }
+  
+  // // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  // logMessageText = "   - best_gain: " + std::to_string(best_gain) + ", path_gain: " + std::to_string(path_gain) + "\n";
+  // logMessage(logMessageText);
 
   if (planning_params_.auto_global_planner_enable) {
     if (!frontier_exists) {
       ++num_low_gain_iters_;
-      ROS_WARN_COND(global_verbosity >= Verbosity::DEBUG,
-                    "No frontier found in this round. Total rounds: %d",
-                    num_low_gain_iters_);
+      ROS_WARN_COND(global_verbosity >= Verbosity::DEBUG, "No frontier found in this round. Total rounds: %d", num_low_gain_iters_);
     } else {
       if (num_low_gain_iters_ > 0) --num_low_gain_iters_;
     }
     if (num_low_gain_iters_ >= 4) {
-      ROS_WARN_COND(
-          global_verbosity >= Verbosity::DEBUG,
-          "%d consecutinve low gain paths, triggering global planner.",
-          num_low_gain_iters_);
+      ROS_WARN_COND(global_verbosity >= Verbosity::DEBUG, "%d consecutinve low gain paths, triggering global planner.", num_low_gain_iters_);
       num_low_gain_iters_ = 0;
       auto_global_planner_trig_ = true;
       return Rrg::GraphStatus::NOT_OK;
@@ -1581,26 +1554,21 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
   // Visualization at the end.
   visualization_->visualizeShortestPaths(local_graph_, local_graph_rep_);
   if (best_gain > 0) {
-    visualization_->visualizeBestPaths(local_graph_, local_graph_rep_, 10,
-                                       best_path_id);
+    visualization_->visualizeBestPaths(local_graph_, local_graph_rep_, 10, best_path_id);
   }
 
-  visualization_->visualizeNegativePaths(inadmissible_negative_edges,
-                                         local_graph_, local_graph_rep_);
+  visualization_->visualizeNegativePaths(inadmissible_negative_edges, local_graph_, local_graph_rep_);
 
   if (best_gain > 0) {
     // create a branch
     std::vector<int> path;
     local_graph_->getShortestPath(best_path_id, local_graph_rep_, false, path);
     for (int i = 0; i < (path.size() - 1); ++i) {
-      local_graph_->getVertex(path[i])->parent =
-          local_graph_->getVertex(path[i + 1]);
+      local_graph_->getVertex(path[i])->parent = local_graph_->getVertex(path[i + 1]);
     }
     best_vertex_ = local_graph_->getVertex(path[0]);
     //
-    ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                  "Best path: with gain [%f] and ID [%d] ", best_gain,
-                  best_path_id);
+    ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "Best path: with gain [%f] and ID [%d] ", best_gain, best_path_id);
     gstatus = Rrg::GraphStatus::OK;
 
     add_frontiers_to_global_graph_ = true;
@@ -1612,8 +1580,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
   }
   stat_->evaluate_graph_time = GET_ELAPSED_TIME(ttime);
   t2 = std::chrono::high_resolution_clock::now();
-  stat_chrono_->evaluate_graph_time =
-      std::chrono::duration<double, std::milli>(t2 - t1).count();
+  stat_chrono_->evaluate_graph_time = std::chrono::duration<double, std::milli>(t2 - t1).count();
   stat_chrono_->printTime("Chrono");
   publishTimings(stat_chrono_);
 
@@ -3479,8 +3446,7 @@ std::vector<geometry_msgs::Pose> Rrg::searchHomingPath(
   return ret_path;
 }
 
-std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
-    geometry_msgs::PoseStamped& waypoint) {
+std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(geometry_msgs::PoseStamped& waypoint) {
   std::vector<geometry_msgs::Pose> ret_path;
   if (global_graph_->getNumVertices() <= 1) {
     ROS_WARN_COND(
@@ -3733,21 +3699,19 @@ std::vector<geometry_msgs::Pose> Rrg::getGlobalPath(
   }
 
   if (!ret_path.empty()) {
-  // Log the end state of ret_path
-  auto& end_pose = ret_path.back();
-  ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                "ret_path end pose: Position - x: %f, y: %f, z: %f; Orientation - x: %f, y: %f, z: %f, w: %f",
-                end_pose.position.x, end_pose.position.y, end_pose.position.z,
-                end_pose.orientation.x, end_pose.orientation.y,
-                end_pose.orientation.z, end_pose.orientation.w);
-}
+    // Log the end state of ret_path
+    auto& end_pose = ret_path.back();
+    ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
+                  "ret_path end pose: Position - x: %f, y: %f, z: %f; Orientation - x: %f, y: %f, z: %f, w: %f",
+                  end_pose.position.x, end_pose.position.y, end_pose.position.z,
+                  end_pose.orientation.x, end_pose.orientation.y,
+                  end_pose.orientation.z, end_pose.orientation.w);
+  }
 
-
-    // Set the heading angle tangent with the moving direction,
-    // from the second waypoint; the first waypoint keeps the same direction.
+  // Set the heading angle tangent with the moving direction,
+  // from the second waypoint; the first waypoint keeps the same direction.
     if (planning_params_.yaw_tangent_correction) {
-      bool is_similar = comparePathWithDirectionApprioximately(
-          ret_path, tf::getYaw(ret_path[0].orientation));
+    bool is_similar = comparePathWithDirectionApprioximately(ret_path, tf::getYaw(ret_path[0].orientation));
       for (int i = 0; i < (ret_path.size() - 1); ++i) {
         Eigen::Vector3d vec;
         if ((!planning_params_.homing_backward) || (is_similar)) {
@@ -3858,8 +3822,7 @@ std::vector<geometry_msgs::Pose> Rrg::getHomingPath(std::string tgt_frame) {
     }
 
     double dmod_time = GET_ELAPSED_TIME(mod_time);
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "Compute an aternate path for homing in %f(s)", dmod_time);
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "Compute an aternate path for homing in %f(s)", dmod_time);
     visualization_->visualizeModPath(mod_path);
   }
 
@@ -3969,22 +3932,18 @@ bool Rrg::reconnectPathBlindly(std::vector<geometry_msgs::Pose>& ref_path,
   return true;
 }
 
-std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
-                                                  int& status) {
+std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame, int& status) {
   // Check if needs to land
-  if (planning_params_.auto_landing_enable &&
-      robot_params_.type == RobotType::kAerialRobot) {
+  if (planning_params_.auto_landing_enable && robot_params_.type == RobotType::kAerialRobot) {
     double time_elapsed = 0.0;
     std::vector<geometry_msgs::Pose> empty_path;
     if ((ros::Time::now()).toSec() != 0.0) {
       if (rostime_start_.toSec() == 0.0) rostime_start_ = ros::Time::now();
       time_elapsed = (double)((ros::Time::now() - rostime_start_).toSec());
     }
-    double time_budget_remaining =
-        planning_params_.time_budget_before_landing - time_elapsed;
+    double time_budget_remaining = planning_params_.time_budget_before_landing - time_elapsed;
     if (time_budget_remaining <= 0.0) {
-      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS,
-                    "RAN OUT OF TIME BUDGET --> LANDING.");
+      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "RAN OUT OF TIME BUDGET --> LANDING.");
       landing_engaged_ = true;
       std_msgs::Bool stop_msg;
       stop_msg.data = true;
@@ -4011,18 +3970,15 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
     double time_budget_remaining =
         planning_params_.time_budget_limit - time_elapsed;
     if (time_budget_remaining <= 0.0) {
-      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS,
-                    "RAN OUT OF TIME BUDGET --> STOP HERE.");
+      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "RAN OUT OF TIME BUDGET --> STOP HERE.");
       return homing_path;
     }
     if (current_battery_time_remaining_ <= 0.0) {
-      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS,
-                    "RAN OUT OF BATTERY --> STOP HERE.");
+      ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "RAN OUT OF BATTERY --> STOP HERE.");
       return homing_path;
     }
     // Check two conditions whatever which one comes first.
-    double time_remaining =
-        std::min(time_budget_remaining, current_battery_time_remaining_);
+    double time_remaining = std::min(time_budget_remaining, current_battery_time_remaining_);
     // homing_path = getHomingPath(tgt_frame);
     // Start searching from current root vertex of spanning local graph.
     Vertex* root_vertex = local_graph_->getVertex(0);
@@ -4030,14 +3986,11 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
     if (!homing_path.empty()) {
       double homing_len = Trajectory::getPathLength(homing_path);
       double time_to_home = homing_len / planning_params_.v_homing_max;
-      ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                    "Time to home: %f; Time remaining: %f", time_to_home,
-                    time_remaining);
+      ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "Time to home: %f; Time remaining: %f", time_to_home, time_remaining);
 
       const double kTimeDelta = 20;
       if (time_to_home > time_remaining - kTimeDelta) {
-        ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS,
-                      "REACHED TIME LIMIT: HOMING ENGAGED.");
+        ROS_WARN_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "REACHED TIME LIMIT: HOMING ENGAGED.");
         if (planning_params_.path_safety_enhance_enable) {
           std::vector<geometry_msgs::Pose> mod_path;
           if (improveFreePath(homing_path, mod_path, true)) {
@@ -4045,11 +3998,9 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
           }
         }
 
-        const double kInterpolationDistance =
-            planning_params_.path_interpolation_distance;
+        const double kInterpolationDistance = planning_params_.path_interpolation_distance;
         std::vector<geometry_msgs::Pose> interp_path;
-        if (Trajectory::interpolatePath(homing_path, kInterpolationDistance,
-                                        interp_path)) {
+        if (Trajectory::interpolatePath(homing_path, kInterpolationDistance, interp_path)) {
           homing_path = interp_path;
         }
 
@@ -4059,8 +4010,7 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
       }
     } else {
       // @TODO Issue with global graph, cannot find a homing path.
-      ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                    "Can not find a path to return home from here.");
+      ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "Can not find a path to return home from here.");
     }
   }
 
@@ -4081,22 +4031,19 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
   local_graph_->getShortestPath(id, local_graph_rep_, true, best_path);
   Eigen::Vector3d p0(best_path[0][0], best_path[0][1], best_path[0][2]);
   std::vector<Vertex*> best_path_vertices;
-  local_graph_->getShortestPath(best_vertex_->id, local_graph_rep_, true,
-                                best_path_vertices);
+  local_graph_->getShortestPath(best_vertex_->id, local_graph_rep_, true, best_path_vertices);
 
   const double kLenMin = 1.0;
   const double kLenMinMin = 0.3;
   std::vector<Eigen::Vector3d> path_vec;
-  local_graph_->getShortestPath(best_vertex_->id, local_graph_rep_, true,
-                                path_vec);
+  local_graph_->getShortestPath(best_vertex_->id, local_graph_rep_, true, path_vec);
   double total_len = Trajectory::getPathLength(path_vec);
   double len_min_thres = kLenMin;
 
   len_min_thres = kLenMinMin;
 
   if (total_len <= len_min_thres) {
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "Best path is too short.");
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "Best path is too short.");
     return ret;
   }
 
@@ -4112,16 +4059,11 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
     Eigen::Vector3d dir_vec = p1 - p0;
 
     // ERROR: Re-confirm this is a safe path.
-    Eigen::Vector3d p_overshoot =
-        dir_vec.normalized() * planning_params_.edge_overshoot;
+    Eigen::Vector3d p_overshoot = dir_vec.normalized() * planning_params_.edge_overshoot;
     Eigen::Vector3d p_start = p0 + robot_params_.center_offset - p_overshoot;
-    Eigen::Vector3d p_end =
-        p0 + robot_params_.center_offset + dir_vec + p_overshoot;
-    if ((dir_vec.norm() > 0) &&
-        (MapManager::VoxelStatus::kFree !=
-         map_manager_->getPathStatus(p_start, p_end, robot_box_size_, true))) {
-      ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                    "Segment [%d] is not clear.", i);
+    Eigen::Vector3d p_end = p0 + robot_params_.center_offset + dir_vec + p_overshoot;
+    if ((dir_vec.norm() > 0) && (MapManager::VoxelStatus::kFree != map_manager_->getPathStatus(p_start, p_end, robot_box_size_, true))) {
+      ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "Segment [%d] is not clear.", i);
     }
 
     tf::Quaternion quat;
@@ -4138,20 +4080,17 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
     double seg_length = (p1 - p0).norm();
     traverse_length += seg_length;
     traverse_time += seg_length / planning_params_.v_max;
-    if ((traverse_length > planning_params_.traverse_length_max) ||
-        (traverse_time > planning_params_.traverse_time_max)) {
+    if ((traverse_length > planning_params_.traverse_length_max) || (traverse_time > planning_params_.traverse_time_max)) {
       break;
     }
     p0 = p1;
   }
   ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                "Best path:  size = %d, length = %f, time = %f",
-                (int)ret.size(), traverse_length, traverse_time);
+    "Best path:  size = %d, length = %f, time = %f", (int)ret.size(), traverse_length, traverse_time);
   // Put this into global graph for homing later.
   bool path_added = false;
   if ((int)ret.size() <= 1) {
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "No ground attached path");
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "No ground attached path");
     return empty_path;
   }
 
@@ -4166,8 +4105,7 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
       path_added = true;
     }
     double dmod_time = GET_ELAPSED_TIME(mod_time);
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "Compute an aternate path in %f(s)", dmod_time);
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "Compute an aternate path in %f(s)", dmod_time);
     visualization_->visualizeModPath(mod_path);
   }
 
@@ -4176,8 +4114,7 @@ std::vector<geometry_msgs::Pose> Rrg::getBestPath(std::string tgt_frame,
   }
 
   // Interpolate path
-  const double kInterpolationDistance =
-      planning_params_.path_interpolation_distance;
+  const double kInterpolationDistance = planning_params_.path_interpolation_distance;
   std::vector<geometry_msgs::Pose> interp_path;
   if (Trajectory::interpolatePath(ret, kInterpolationDistance, interp_path)) {
     ret = interp_path;
@@ -4434,10 +4371,8 @@ bool Rrg::improveFreePath(const std::vector<geometry_msgs::Pose>& path_orig,
   return mod_success;
 }
 
-bool Rrg::addRefPathToGraph(const std::shared_ptr<GraphManager> graph_manager,
-                            const std::vector<Vertex*>& vertices) {
+bool Rrg::addRefPathToGraph(const std::shared_ptr<GraphManager> graph_manager, const std::vector<Vertex*>& vertices) {
   if (vertices.size() <= 0) return false;
-
   // The whole path is collision free already and start from root vertex.
   // We only need to link the first vertex to the existing graph.
   // Then add the whole path to the graph.
@@ -4593,10 +4528,8 @@ bool Rrg::addRefPathToGraph(const std::shared_ptr<GraphManager> graph_manager,
   return true;
 }
 
-bool Rrg::addRefPathToGraph(const std::shared_ptr<GraphManager> graph_manager,
-                            const std::vector<geometry_msgs::Pose>& path) {
+bool Rrg::addRefPathToGraph(const std::shared_ptr<GraphManager> graph_manager, const std::vector<geometry_msgs::Pose>& path) {
   if (path.size() <= 0) return false;
-
   // The whole path is collision free already and start from root vertex.
   // We only need to link the first vertex to the existing graph.
   // Then add the whole path to the graph.
@@ -5187,36 +5120,51 @@ double Rrg::getTimeRemained() {
   return std::min(time_budget_remaining, current_battery_time_remaining_);
 }
 
-bool Rrg::isRemainingTimeSufficient(const double& time_cost,
-                                    double& time_spare) {
-  const double kTimeDelta = 20;  // magic number, extra safety
-  time_spare = getTimeRemained() - time_cost;
-  if (time_spare < kTimeDelta) {
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "REACHED TIME LIMIT: BE CAREFUL.");
-    return false;
-  }
-  return true;
+void Rrg::logMessage(const std::string& messageToLog) {
+    // (Doncey Albin - 09/24/2024)
+    std::ofstream log_file; // Init log stream (Doncey-Remove after testing)
+    
+    // Open file in append mode with a fixed log file path
+    log_file.open(planning_params_.log_file_path, std::ios::app);
+    
+    if (log_file.is_open()) {
+        // Log the passed message
+        log_file << messageToLog << "\n";
+        log_file.close(); // Close the file stream (Doncey-Remove after testing)
+    } else {
+        std::cerr << "Failed to open log file." << std::endl;
+    }
+}
+
+bool Rrg::isRemainingTimeSufficient(const double& time_cost, double& time_spare) {
+    const double kTimeDelta = 20;  // magic number, extra safety
+    time_spare = getTimeRemained() - time_cost;
+    if (time_spare < kTimeDelta) {
+      ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "REACHED TIME LIMIT: BE CAREFUL.");
+      return false;
+    }
+    return true;
 }
 
 std::vector<geometry_msgs::Pose> Rrg::reRunGlobalPlanner() {
   return runGlobalPlanner(current_global_vertex_id_, true, true);
 }
 
-std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
-                                                       bool not_check_frontier,
-                                                       bool ignore_time) {
+std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id, bool not_check_frontier, bool ignore_time) {
   // @not_check_frontier: just check if it is feasible (collision-free + time)
   // @ignore_time: don't consider time budget.
 
   // Check if exists any frontier in the global graph
   // Get the list of current frontiers.
   //
-  ROS_INFO_COND(global_verbosity >= Verbosity::PLANNER_STATUS,
-                "Global planner triggered");
+  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  std::string logMessageText =  "\nRrg::runGlobalPlanner Called\n";
+  logMessage(logMessageText);
+
+  ROS_INFO_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "Global planner triggered");
   if (vertex_id) {
     ros::Duration(3.0).sleep();  // sleep to unblock the thread to get and
-                                 // update all latest pose update.
+                                // update all latest pose update.
     ros::spinOnce();
   }
 
@@ -5312,21 +5260,16 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
     return ret_path;
   }
 
-  ROS_WARN_COND(
-      global_verbosity >= Verbosity::WARN,
-      "Added current state to the graph. Start searching for the global path "
-      "now.");
+  ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "Added current state to the graph. Start searching for the global path now.");
   // Get Dijsktra path from home to all.
   if (!global_graph_->findShortestPaths(global_graph_rep_)) {
-    ROS_ERROR_COND(global_verbosity >= Verbosity::ERROR,
-                   "[GlobalGraph] Failed to find shortest path.");
+    ROS_ERROR_COND(global_verbosity >= Verbosity::ERROR, "[GlobalGraph] Failed to find shortest path.");
     return ret_path;
   }
   // Get Dijsktra path from current to all.
   ShortestPathsReport frontier_graph_rep;
   if (!global_graph_->findShortestPaths(link_vertex->id, frontier_graph_rep)) {
-    ROS_ERROR_COND(global_verbosity >= Verbosity::ERROR,
-                   "[GlobalGraph] Failed to find shortest path.");
+    ROS_ERROR_COND(global_verbosity >= Verbosity::ERROR, "[GlobalGraph] Failed to find shortest path.");
     return ret_path;
   }
   // Check if the planner should find the best vertex automatically or manually
@@ -5335,57 +5278,42 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
 
   if (vertex_id) {
     // Manual mode
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "[Global Planner] Manual Mode");
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "[Global Planner] Manual Mode");
     // Just need to check if it is feasible
     std::vector<int> current_to_target_path_id;
     std::vector<int> target_to_home_path_id;
     double current_to_target_distance;
     double target_to_home_distance;
-    global_graph_->getShortestPath(vertex_id, frontier_graph_rep, true,
-                                   current_to_target_path_id);
-    global_graph_->getShortestPath(vertex_id, global_graph_rep_, false,
-                                   target_to_home_path_id);
-    current_to_target_distance =
-        global_graph_->getShortestDistance(vertex_id, frontier_graph_rep);
-    target_to_home_distance =
-        global_graph_->getShortestDistance(vertex_id, global_graph_rep_);
+    global_graph_->getShortestPath(vertex_id, frontier_graph_rep, true, current_to_target_path_id);
+    global_graph_->getShortestPath(vertex_id, global_graph_rep_, false, target_to_home_path_id);
+    current_to_target_distance = global_graph_->getShortestDistance(vertex_id, frontier_graph_rep);
+    target_to_home_distance = global_graph_->getShortestDistance(vertex_id, global_graph_rep_);
+
     // Estimate time
     double time_remaining = getTimeRemained();
-    double time_to_target =
-        current_to_target_distance / planning_params_.v_homing_max;
-    double time_to_home =
-        target_to_home_distance / planning_params_.v_homing_max;
+    double time_to_target = current_to_target_distance / planning_params_.v_homing_max;
+    double time_to_home = target_to_home_distance / planning_params_.v_homing_max;
     double time_cost = 0;
     if (!ignore_time) {
-      ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                    "[Global] Time remaining: %f (sec)", time_remaining);
+      ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "[Global] Time remaining: %f (sec)", time_remaining);
       time_cost += time_to_target;
-      ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                    "[Global] Time to [%3d]: %f (sec)", vertex_id,
-                    time_to_target);
+      ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "[Global] Time to [%3d]: %f (sec)", vertex_id, time_to_target);
       if (planning_params_.auto_homing_enable) {
         time_cost += time_to_home;
-        ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                      "[Global] Time to home  : %f (sec)", time_to_home);
+        ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "[Global] Time to home  : %f (sec)", time_to_home);
       }
     }
     double time_spare = 0;
     if (!isRemainingTimeSufficient(time_cost, time_spare)) {
-      ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                    "[Global] Not enough time to go the vertex [%d]",
-                    vertex_id);
-      ROS_WARN_COND(
-          global_verbosity >= Verbosity::WARN,
-          "[Global] Consider change to another ID or set ignore_time to True");
+      ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "[Global] Not enough time to go the vertex [%d]", vertex_id);
+      ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "[Global] Consider change to another ID or set ignore_time to True");
       return ret_path;
     }
     best_frontier = global_graph_->getVertex(vertex_id);
     best_gain = 1.0;
   } else {
     // Auto mode
-    ROS_WARN_COND(global_verbosity >= Verbosity::WARN,
-                  "[Global Planner] Auto mode");
+    ROS_WARN_COND(global_verbosity >= Verbosity::WARN, "[Global Planner] Auto mode");
     // Get list of feasible frontiers by checking remaining time.
     // Leave the check empty for now since it relate to time budget setting.
     std::vector<Vertex*> feasible_global_frontiers;
@@ -5399,47 +5327,26 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
         double current_to_frontier_distance;
         double frontier_to_home_distance;
 
-        global_graph_->getShortestPath(f->id, frontier_graph_rep, true,
-                                       current_to_frontier_path_id);
-        global_graph_->getShortestPath(f->id, global_graph_rep_, false,
-                                       frontier_to_home_path_id);
-        current_to_frontier_distance =
-            global_graph_->getShortestDistance(f->id, frontier_graph_rep);
-        frontier_to_home_distance =
-            global_graph_->getShortestDistance(f->id, global_graph_rep_);
+        global_graph_->getShortestPath(f->id, frontier_graph_rep, true, current_to_frontier_path_id);
+        global_graph_->getShortestPath(f->id, global_graph_rep_, false, frontier_to_home_path_id);
+        current_to_frontier_distance = global_graph_->getShortestDistance(f->id, frontier_graph_rep);
+        frontier_to_home_distance = global_graph_->getShortestDistance(f->id, global_graph_rep_);
 
-        double time_to_target =
-            current_to_frontier_distance / planning_params_.v_homing_max;
-        double time_to_home =
-            frontier_to_home_distance / planning_params_.v_homing_max;
-        double time_cost = time_to_target + planning_params_.auto_homing_enable
-                               ? time_to_home
-                               : 0;
+        double time_to_target = current_to_frontier_distance / planning_params_.v_homing_max;
+        double time_to_home = frontier_to_home_distance / planning_params_.v_homing_max;
+        double time_cost = time_to_target + planning_params_.auto_homing_enable ? time_to_home : 0;
         double time_spare = 0;
         if (isRemainingTimeSufficient(time_cost, time_spare)) {
           feasible_global_frontiers.push_back(f);
         }
       }
     }
-    ROS_INFO_COND(global_verbosity >= Verbosity::INFO,
-                  "Get %d feasible frontiers from global frontiers.",
-                  (int)feasible_global_frontiers.size());
+    ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "Get %d feasible frontiers from global frontiers.", (int)feasible_global_frontiers.size());
     if (feasible_global_frontiers.size() <= 0) {
-      ROS_INFO_COND(
-          global_verbosity >= Verbosity::INFO,
-          "No feasible frontier exists --> Call HOMING instead if fully "
-          "explored.");
+      ROS_INFO_COND(global_verbosity >= Verbosity::INFO, "No feasible frontier exists --> Call HOMING instead if fully explored.");
       return ret_path;
     }
-    
-    // TODO: Delete after verification (Doncey Albin - 08/25/2024)
-    // Log best gain, volumetric gain, and exploration gain to a text file.
-    std::ofstream log_file;
-    log_file.open(planning_params_.log_file_path, std::ios::app); // Open file in append mode
-    // print log file path
-    log_file << "\n\nLog file path: [" << planning_params_.log_file_path << "]\n";
-    
-    // Compute exploration gain.
+
     std::unordered_map<int, double> frontier_exp_gain;
     for (int i = 0; i < feasible_global_frontiers.size(); ++i) {
       Vertex* f = feasible_global_frontiers[i];
@@ -5449,48 +5356,33 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
       double current_to_frontier_distance;
       double frontier_to_home_distance;
 
-      global_graph_->getShortestPath(f->id, frontier_graph_rep, true,
-                                     current_to_frontier_path_id);
-      global_graph_->getShortestPath(f->id, global_graph_rep_, false,
-                                     frontier_to_home_path_id);
-      current_to_frontier_distance =
-          global_graph_->getShortestDistance(f->id, frontier_graph_rep);
-      frontier_to_home_distance =
-          global_graph_->getShortestDistance(f->id, global_graph_rep_);
+      global_graph_->getShortestPath(f->id, frontier_graph_rep, true, current_to_frontier_path_id);
+      global_graph_->getShortestPath(f->id, global_graph_rep_, false, frontier_to_home_path_id);
+      current_to_frontier_distance = global_graph_->getShortestDistance(f->id, frontier_graph_rep);
+      frontier_to_home_distance = global_graph_->getShortestDistance(f->id, global_graph_rep_);
 
       // Duplication from above but easier to understand.
-      double time_to_target =
-          current_to_frontier_distance / planning_params_.v_homing_max;
-      double time_to_home =
-          frontier_to_home_distance / planning_params_.v_homing_max;
-      double time_cost = time_to_target + planning_params_.auto_homing_enable
-                             ? time_to_home
-                             : 0;
+      double time_to_target = current_to_frontier_distance / planning_params_.v_homing_max;
+      double time_to_home = frontier_to_home_distance / planning_params_.v_homing_max;
+      double time_cost = time_to_target + planning_params_.auto_homing_enable ? time_to_home : 0;
       double time_spare = 0;
       if (!isRemainingTimeSufficient(time_cost, time_spare)) {
         time_spare = 1;
       }
 
       // const double kGDistancePenalty = 0.01; // Used as a param now
-      double exp_gain = f->vol_gain.gain *
-                        exp(-planning_params_.kGDistancePenalty * current_to_frontier_distance);
+      double exp_gain = f->vol_gain.gain * exp(-planning_params_.kGDistancePenalty * current_to_frontier_distance);
       if (!ignore_time) exp_gain *= time_spare;
       frontier_exp_gain[f->id] = exp_gain;
       if (exp_gain > best_gain) {
         best_gain = exp_gain;
         best_frontier = f;
-
-        log_file << "\nBest gain: [" << best_gain << "]\n"
-                 << "     - Volumetric gain: [" << f->vol_gain.gain << "], Exploration Gain: [" << exp_gain << "]";
       }
     }
-    log_file.close(); // Close the file stream
 
     // Rank from the best one.
     // Sort into descending order.
-    std::sort(feasible_global_frontiers.begin(),
-              feasible_global_frontiers.end(),
-              [&frontier_exp_gain](const Vertex* a, const Vertex* b) {
+    std::sort(feasible_global_frontiers.begin(), feasible_global_frontiers.end(), [&frontier_exp_gain](const Vertex* a, const Vertex* b) {
                 return frontier_exp_gain[a->id] > frontier_exp_gain[b->id];
               });
     // Print out
@@ -5515,9 +5407,9 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id,
     }
 
     global_graph_->getShortestPath(best_frontier->id, frontier_graph_rep, true,
-                                   current_to_frontier_path_id);
+                                  current_to_frontier_path_id);
     global_graph_->getShortestPath(best_frontier->id, global_graph_rep_, false,
-                                   frontier_to_home_path_id);
+                                  frontier_to_home_path_id);
     int current_to_frontier_path_id_size = current_to_frontier_path_id.size();
     for (int i = 0; i < current_to_frontier_path_id_size; ++i) {
       StateVec state =
@@ -5867,10 +5759,8 @@ std::vector<geometry_msgs::Pose> Rrg::searchPathToPassGate() {
     if (global_graph_->getNumVertices()) {
       std::vector<Vertex*> vertices_to_add;
       for (int i = 0; i < ret_path.size(); ++i) {
-        StateVec st(ret_path[i].position.x, ret_path[i].position.y,
-                    ret_path[i].position.z, 0);
-        Vertex* ver =
-            new Vertex(i, st);  // temporary id to generate vertex list.
+        StateVec st(ret_path[i].position.x, ret_path[i].position.y, ret_path[i].position.z, 0);
+        Vertex* ver = new Vertex(i, st);  // temporary id to generate vertex list.
         ver->is_leaf_vertex = false;
         vertices_to_add.push_back(ver);
       }
@@ -5906,8 +5796,7 @@ void RobotStateHistory::addState(StateVec* s) {
   state_hist_.push_back(s);
 }
 
-bool RobotStateHistory::getNearestState(const StateVec* state,
-                                        StateVec** s_res) {
+bool RobotStateHistory::getNearestState(const StateVec* state, StateVec** s_res) {
   // it seems kdtree lib  can not deal with empty tree, put a guard check here.
   if (state_hist_.size() == 0) return false;
   kdres* nearest = kd_nearest3(kd_tree_, state->x(), state->y(), state->z());
@@ -5920,8 +5809,7 @@ bool RobotStateHistory::getNearestState(const StateVec* state,
   return true;
 }
 
-bool RobotStateHistory::getNearestStates(const StateVec* state, double range,
-                                         std::vector<StateVec*>* s_res) {
+bool RobotStateHistory::getNearestStates(const StateVec* state, double range, std::vector<StateVec*>* s_res) {
   // Notice that this might include the same vertex in the result.
   // if that vertex is added to the tree before.
   // Use the distance 0 or small threshold to filter out.
@@ -5950,8 +5838,7 @@ bool RobotStateHistory::getNearestStateInRange(const StateVec* state,
   }
   *s_res = (StateVec*)kd_res_item_data(nearest);
   Eigen::Vector3d dist;
-  dist << state->x() - (*s_res)->x(), state->y() - (*s_res)->y(),
-      state->z() - (*s_res)->z();
+  dist << state->x() - (*s_res)->x(), state->y() - (*s_res)->y(), state->z() - (*s_res)->z();
   kd_res_free(nearest);
   if (dist.norm() > range) return false;
   return true;
