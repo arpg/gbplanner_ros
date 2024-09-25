@@ -89,6 +89,9 @@ class Rrg {
       MapManagerVoxblox<MapManagerVoxbloxServer, MapManagerVoxbloxVoxel>*
           map_manager);
 
+  // LOGGER (Added by Doncey Albin on 9/25/2024)
+  void logMessage(const std::string& messageToLog);
+
   // Initialize the graph to start a new planning session.
   void reset();
 
