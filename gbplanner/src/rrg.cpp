@@ -1448,12 +1448,17 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
   START_TIMER(ttime);
   t1 = std::chrono::high_resolution_clock::now();
   double best_gain = 0;
+
+  double accum_path_gain = 0;       // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  double ave_path_gain = 0;         // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  double accum_path_vol_gain = 0;   // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  double ave_path_vol_gain = 0;     // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+
   int best_path_id = 0;
   int num_leaf_vertices = leaf_vertices.size();
   bool frontier_exists = false;
   std::vector<int> negative_edge_leafs;
   std::vector<Eigen::Vector3d> inadmissible_negative_edges;
-  int logged_volgain = 0; // TODO: Delete after verification (Doncey Albin - 09/25/2024)
   for (int i = 0; i < num_leaf_vertices; ++i) {
     int id = leaf_vertices[i]->id;
     std::vector<Vertex*> path;
@@ -1463,25 +1468,13 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
     if (path_size > 1) {
       // At least 2 vertices: root + leaf.
       double path_gain = 0;
-      double accum_vol_gain = 0;  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+      double path_vol_gain = 0;  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
       double lambda = planning_params_.path_length_penalty;
       bool inadmissible_edge = false;
       for (int ind = 0; ind < path_size; ++ind) {
         Vertex* v_id = path[ind];
         double path_length = local_graph_->getShortestDistance(v_id->id, local_graph_rep_);
         double vol_gain = v_id->vol_gain.gain * exp(-v_id->is_hanging * planning_params_.hanging_vertex_penalty);
-
-        // TODO: Delete after verification (Doncey Albin - 09/25/2024)
-        if (logged_volgain < 1  && v_id->is_hanging) {
-          logMessageText = "   - v_id->vol_gain.gain " + std::to_string(v_id->vol_gain.gain) + ", heuristic vol_gain: " + std::to_string(vol_gain);
-          logMessage(logMessageText);
-          logged_volgain++;
-        }
-        else if (logged_volgain < 1  && !v_id->is_hanging && ind == path_size-1) {
-          logMessageText = "   - v_id->is_hanging is false";
-          logMessage(logMessageText);
-          logged_volgain++;
-        }
 
         if (ind > 0 && robot_params_.type == RobotType::kGroundRobot) {
           double inclination = edge_inclinations_[path[ind]->id][path[ind - 1]->id];
@@ -1499,7 +1492,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
           }
         }
         if (!inadmissible_edge) {
-          accum_vol_gain += vol_gain;
+          path_vol_gain += v_id->vol_gain.gain;              // Accumulated volumetric gain without hanging_vertex_penalty applied
           path_gain += vol_gain * exp(-lambda * path_length);
           v_id->vol_gain.accumulative_gain = path_gain;
           num_unknown_voxels += v_id->vol_gain.num_unknown_voxels;
@@ -1518,12 +1511,8 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
       double fw_ratio = Trajectory::computeDistanceBetweenTrajectoryAndDirection(path_list, exploring_direction_, 0.2, true);
       path_gain *= exp(-lambda2 * fw_ratio);
 
-      // TODO: Delete after verification (Doncey Albin - 09/25/2024)
-      if (i < 1) {
-        logMessageText = "   - path_gain " + std::to_string(path_gain) + ", accum_vol_gain: " + std::to_string(accum_vol_gain) + "\n";
-        
-        logMessage(logMessageText);
-      }
+      accum_path_gain += path_gain;         // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+      accum_path_vol_gain += path_vol_gain; // TODO: Delete after verification (Doncey Albin - 09/25/2024)
 
       if (path_gain > best_gain) {
         best_gain = path_gain;
@@ -1531,6 +1520,12 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
       }
     }
   }
+
+  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
+  ave_path_gain = accum_path_gain / num_leaf_vertices;
+  ave_path_vol_gain = accum_path_vol_gain / num_leaf_vertices;
+  logMessageText = "   - ave_path_gain " + std::to_string(ave_path_gain) + ", ave_path_vol_gain: " + std::to_string(ave_path_vol_gain) + "\n";
+  logMessage(logMessageText);
 
   if (planning_params_.auto_global_planner_enable) {
     if (!frontier_exists) {
