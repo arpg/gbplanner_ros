@@ -1511,9 +1511,6 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
         continue;
       }
 
-      // TODO: Delete after verification (Doncey Albin - 09/25/2024)
-      double path_gain_orig = path_gain; // Store original path gain calc
-
       // Compare with exploring direction to penalty not-forward paths.
       double lambda2 = planning_params_.path_direction_penalty;
       std::vector<Eigen::Vector3d> path_list;
@@ -1523,8 +1520,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
 
       // TODO: Delete after verification (Doncey Albin - 09/25/2024)
       if (i < 1) {
-        logMessageText = "   - path_gain " + std::to_string(path_gain_orig) + ", heuristic path_gain: " + std::to_string(path_gain) 
-          + ", accum_vol_gain: " + std::to_string(accum_vol_gain) + "\n";
+        logMessageText = "   - path_gain " + ", greedy_vol_path_gain: " + std::to_string(accum_vol_gain) + "\n";
         
         logMessage(logMessageText);
       }
