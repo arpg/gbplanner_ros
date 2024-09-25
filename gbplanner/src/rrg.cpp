@@ -1531,10 +1531,6 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
       }
     }
   }
-  
-  // // TODO: Delete after verification (Doncey Albin - 09/25/2024)
-  // logMessageText = "   - best_gain: " + std::to_string(best_gain) + ", path_gain: " + std::to_string(path_gain) + "\n";
-  // logMessage(logMessageText);
 
   if (planning_params_.auto_global_planner_enable) {
     if (!frontier_exists) {
@@ -5157,10 +5153,6 @@ std::vector<geometry_msgs::Pose> Rrg::runGlobalPlanner(int vertex_id, bool not_c
   // Check if exists any frontier in the global graph
   // Get the list of current frontiers.
   //
-  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
-  std::string logMessageText =  "\nRrg::runGlobalPlanner Called\n";
-  logMessage(logMessageText);
-
   ROS_INFO_COND(global_verbosity >= Verbosity::PLANNER_STATUS, "Global planner triggered");
   if (vertex_id) {
     ros::Duration(3.0).sleep();  // sleep to unblock the thread to get and
