@@ -1463,6 +1463,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
     if (path_size > 1) {
       // At least 2 vertices: root + leaf.
       double path_gain = 0;
+      double accum_vol_gain = 0;  // TODO: Delete after verification (Doncey Albin - 09/25/2024)
       double lambda = planning_params_.path_length_penalty;
       bool inadmissible_edge = false;
       for (int ind = 0; ind < path_size; ++ind) {
@@ -1498,6 +1499,7 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
           }
         }
         if (!inadmissible_edge) {
+          accum_vol_gain += vol_gain;
           path_gain += vol_gain * exp(-lambda * path_length);
           v_id->vol_gain.accumulative_gain = path_gain;
           num_unknown_voxels += v_id->vol_gain.num_unknown_voxels;
@@ -1521,7 +1523,9 @@ Rrg::GraphStatus Rrg::evaluateGraph() {
 
       // TODO: Delete after verification (Doncey Albin - 09/25/2024)
       if (i < 1) {
-        logMessageText = "   - path_gain " + std::to_string(path_gain_orig) + ", heuristic path_gain: " + std::to_string(path_gain) + "\n";
+        logMessageText = "   - path_gain " + std::to_string(path_gain_orig) + ", heuristic path_gain: " + std::to_string(path_gain) 
+          + ", accum_vol_gain: " + std::to_string(accum_vol_gain) + "\n";
+        
         logMessage(logMessageText);
       }
 
